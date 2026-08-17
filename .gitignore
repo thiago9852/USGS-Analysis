@@ -1,0 +1,9 @@
+# Data CSV files (exceeds GitHub size limits)
+*.csv
+Data/*.csv
+
+# Python cache & temp
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
