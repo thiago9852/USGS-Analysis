@@ -12,6 +12,68 @@
 
 ---
 
+## Sumário
+- [Biblioteca de Medidas DAX](#-biblioteca-de-medidas-dax)
+- [Finalidade da Análise](#finalidade-da-análise)
+- [Estrutura de Diretórios](#estrutura-de-diretórios)
+- [Como foi Feita a Coleta de Dados (Data Ingestion Pipeline)](#como-foi-feita-a-coleta-de-dados-data-ingestion-pipeline)
+- [Passos do Pipeline de Dados (End-to-End Workflow)](#-passos-do-pipeline-de-dados-end-to-end-workflow)
+- [Análise Exploratória de Dados (EDA)](#análise-exploratória-de-dados-eda)
+- [Validação Estatística de Hipóteses](#validação-estatística-de-hipóteses)
+
+---
+
+## Biblioteca de Medidas DAX
+
+Fórmulas DAX organizadas na tabela dedicada `_Medidas` para suporte às visualizações e KPIs do relatório Power BI:
+
+```dax
+-- 1. Total de Terremotos Registrados
+Total Terremotos = COUNTROWS('terremotos_processado')
+
+-- 2. Magnitude Média
+Magnitude Média = AVERAGE('terremotos_processado'[mag])
+
+-- 3. Maior Magnitude Registrada
+Maior Magnitude = MAX('terremotos_processado'[mag])
+
+-- 4. Profundidade Média (km)
+Profundidade Média km = AVERAGE('terremotos_processado'[depth])
+
+-- 5. Quantidade de Terremotos Rasos (< 70 km)
+Qtd Terremotos Rasos = CALCULATE([Total Terremotos], 'terremotos_processado'[depth] < 70)
+
+-- 6. Percentual de Terremotos Rasos
+% Terremotos Rasos = DIVIDE([Qtd Terremotos Rasos], [Total Terremotos], 0)
+
+-- 7. Tremores Severos (Magnitude >= 7.0)
+Tremores Severos M7 = CALCULATE([Total Terremotos], 'terremotos_processado'[mag] >= 7)
+
+-- 8. Total de Energia Liberada em Petajoules (PJ) (Equação de Gutenberg-Richter)
+Energia Liberada Total (PJ) = 
+SUMX(
+    'terremotos_processado', 
+    POWER(10, (1.5 * 'terremotos_processado'[mag]) + 4.8)
+) / POWER(10, 15)
+
+-- 9. Formatação Científica de Energia Liberada (Exajoules / Petajoules)
+Energia Liberada Formatada = 
+VAR Energia = [Energia Liberada Total (PJ)]
+RETURN
+IF(
+    Energia >= 1E18,
+    FORMAT(Energia / 1E18, "#,##0.00") & " Exajoules (EJ)",
+    IF(
+        Energia >= 1E15,
+        FORMAT(Energia / 1E15, "#,##0.00") & " Petajoules (PJ)",
+        FORMAT(Energia / 1E12, "#,##0.00") & " Terajoules (TJ)"
+    )
+)
+
+```
+
+---
+
 ## Finalidade da Análise
 O objetivo primário é compreender a dinâmica de ocorrência e a liberação de energia dos abalos sísmicos no planeta:
 
@@ -115,7 +177,7 @@ Desenvolvimento do notebook [`earthquake_analysis.ipynb`](Python/earthquake_anal
 
 ### Hipótese 1: Profundidade Focal vs. Severidade de Impacto
 ![Profundidade Focal vs Severidade](Data/01_hipotese1_profundidade_severidade.png)
-> **Terremotos rasos causam mais estragos porque a energia explode perto das cidades, sem tempo de se dissipar na rocha profunda.
+> **Terremotos rasos causam mais estragos porque a energia explode perto das cidades, sem tempo de se dissipar na rocha profunda.**
 
 ---
 
